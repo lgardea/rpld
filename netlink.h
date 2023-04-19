@@ -22,6 +22,8 @@ int nl_add_route_via(uint32_t ifindex, const struct in6_addr *route,
 int nl_add_route_default(uint32_t ifindex, const struct in6_addr *via);
 int nl_del_route_via(uint32_t ifindex, const struct in6_prefix *dst,
 		     struct in6_addr *via);
+int nl_del_route_default(uint32_t ifindex, const struct in6_prefix *dst,
+		     struct in6_addr *via);
 int netlink_open(void);
 void netlink_close(void);
 

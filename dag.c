@@ -328,7 +328,7 @@ void dag_process_dio(struct dag *dag)
 		flog(LOG_ERR, "error add nl %d", errno);
 		return;
 	}
-	rc = nl_del_route_via(dag->iface->ifindex, &dag->dest, NULL);
+	rc = nl_del_route_default(dag->iface->ifindex, &dag->dest, &dag->parent->addr);
 	if (rc == -1) {
 		flog(LOG_ERR, "error del nl %d, %s", errno, strerror(errno));
 		return;

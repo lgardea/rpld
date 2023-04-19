@@ -32,6 +32,7 @@ static void process_dio(int sock, struct iface *iface, const void *msg,
 	struct in6_prefix pfx;
 	struct dag *dag;
 	uint16_t rank;
+	int rc;
 
 	if (len < sizeof(*dio)) {
 		flog(LOG_INFO, "dio length mismatch, drop");
@@ -83,25 +84,28 @@ static void process_dio(int sock, struct iface *iface, const void *msg,
 		flog(LOG_INFO, "created dag %s", addr_str);
 	}
 
-	flog(LOG_INFO, "process dio %s", addr_str);
-
 	rank = ntohs(dio->rpl_dagrank);
+	flog(LOG_INFO, "process dio %s - rank %d", addr_str, rank);
+
 	if (!dag->parent) {
 		dag->parent = dag_peer_create(&addr->sin6_addr);
 		if (!dag->parent)
 			return;
 	}
 
-	if (rank > dag->parent->rank)
+	if (rank < dag->parent->rank){
+		dag_process_dio(dag);
+		dag->parent = dag_peer_create(&addr->sin6_addr);
+		addrtostr(&dag->parent->addr, addr_str, sizeof(addr_str));
+		flog(LOG_INFO, "dag has parent %s", addr_str);
+		dag->parent->rank = rank;
+		dag->my_rank = rank + 1;
+		rc = nl_add_route_default(dag->iface->ifindex, &dag->parent->addr);
+		flog(LOG_INFO, "default route %d %s", rc, strerror(errno));
+		if (dag->parent)
+			send_dao(sock, &dag->parent->addr, dag);
 		return;
-
-	dag->parent->rank = rank;
-	dag->my_rank = rank + 1;
-
-	dag_process_dio(dag);
-
-	if (dag->parent)
-		send_dao(sock, &dag->parent->addr, dag);
+	}
 }
 
 static void process_dao(int sock, struct iface *iface, const void *msg,
