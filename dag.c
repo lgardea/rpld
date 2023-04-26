@@ -328,6 +328,30 @@ void dag_process_dio(struct dag *dag)
 		flog(LOG_ERR, "error add nl %d", errno);
 		return;
 	}
+	rc = nl_del_route_via(dag->iface->ifindex, &dag->dest, NULL);
+	if (rc == -1) {
+		flog(LOG_ERR, "error del nl %d, %s", errno, strerror(errno));
+		return;
+	}
+
+	memcpy(&dag->self, &addr, sizeof(dag->self));
+}
+
+void dag_process_dio_rt(struct dag *dag)
+{
+	struct in6_addr addr;
+	int rc;
+
+	rc = gen_stateless_addr(&dag->dest, &dag->iface->llinfo,
+				&addr);
+	if (rc == -1)
+		return;
+
+	rc = nl_add_addr(dag->iface->ifindex, &addr);
+	if (rc == -1 && errno != EEXIST) {
+		flog(LOG_ERR, "error add nl %d", errno);
+		return;
+	}
 	rc = nl_del_route_default(dag->iface->ifindex, &dag->dest, &dag->parent->addr);
 	if (rc == -1) {
 		flog(LOG_ERR, "error del nl %d, %s", errno, strerror(errno));

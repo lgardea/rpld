@@ -93,8 +93,11 @@ static void process_dio(int sock, struct iface *iface, const void *msg,
 			return;
 	}
 
+	if (rank > dag->parent->rank)
+		return;
+
 	if (rank < dag->parent->rank){
-		dag_process_dio(dag);
+		dag_process_dio_rt(dag);
 		dag->parent = dag_peer_create(&addr->sin6_addr);
 		addrtostr(&dag->parent->addr, addr_str, sizeof(addr_str));
 		flog(LOG_INFO, "dag has parent %s", addr_str);
@@ -106,6 +109,12 @@ static void process_dio(int sock, struct iface *iface, const void *msg,
 			send_dao(sock, &dag->parent->addr, dag);
 		return;
 	}
+
+	dag->parent->rank = rank;
+	dag->my_rank = rank + 1;
+	dag_process_dio(dag);
+	if (dag->parent)
+		send_dao(sock, &dag->parent->addr, dag);
 }
 
 static void process_dao(int sock, struct iface *iface, const void *msg,
